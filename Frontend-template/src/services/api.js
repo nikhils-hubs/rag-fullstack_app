@@ -1,7 +1,7 @@
 import axios from "axios"
 
 const API = axios.create({
-    baseUrl: "http://localhost:8000",
+    baseURL: "http://localhost:8000",
 });
 
 const sendChatMessage = async (message) => {

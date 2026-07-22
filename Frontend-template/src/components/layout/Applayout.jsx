@@ -2,23 +2,37 @@ import Navbar from "./Navbar"
 import MainLayout from "./MainLayout"
 import ChatInput from "../Input/ChatInput"
 import { useState } from "react"
+import sendChatMessage from "../../services/api"
 
 function AppLayout() {
     let [messages, setMessages] = useState([])
     let [isTyping, setIsTyping] = useState(false);
 
-    function addMessage(newMsg) {
+    async function addMessage(newMsg) {
         setMessages((prev) => [...prev, newMsg])
         setIsTyping(true);
-        setTimeout(() => {
-            const fakeAiReply = {
-                id: Date.now() + 1,
-                role: "ai",
-                content: "This is a placeholder response while the real API isn't connected yet.",
-            };
-            setMessages((prev) => [...prev, fakeAiReply])
+        try {
+            const response = await sendChatMessage(newMsg.content)
+            const aireply = {
+                id: Date.now(),
+                role: "system",
+                content: response.message_to_send
+            }
+            setMessages((prev) => [...prev, aireply])
+        }
+        catch (err) {
+            console.error(err)
+            setMessages((prev) => [...prev,
+            {
+                id: Date.now(),
+                role: "system",
+                content: "Something went Wrong"
+            }
+            ])
+        }
+        finally {
             setIsTyping(false)
-        }, 4000)
+        }
     }
     return (
         <div className="h-screen flex flex-col">

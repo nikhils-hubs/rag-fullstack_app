@@ -10,7 +10,6 @@ FILE_PATH = os.path.join(BASE_DIR,"documents","building-Muscle-Made-rag.pdf")
 
 loader = PyMuPDFLoader(FILE_PATH)
 document = loader.load()
-document = document[:20]
 
 text_spliters = RecursiveCharacterTextSplitter(
     separators= ["\n\n", "\n", " ", ""],

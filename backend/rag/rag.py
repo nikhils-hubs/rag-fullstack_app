@@ -1,8 +1,9 @@
 import os 
-from google import genai
+from groq import Groq
 from dotenv import load_dotenv
 from langchain_chroma import Chroma
-from rag_structure import embedding
+from rag.rag_structure import embedding
+from prompts.llm_prompt import prompt
 
 load_dotenv()
 
@@ -30,14 +31,13 @@ def make_history(user_query,LLm_reponse):
     if len(history) > MAX_LIMIT: 
         del history[:2]
     
-def format_history():
+def format_history(history):
     conversation = ""
     for message in history:
         role = message['role']
         content = message['content']
 
         if role == "user":
-            
             conversation += f"User: {message['content']}"
         else: 
             conversation += f"Ai: {message['content']}"
@@ -45,8 +45,11 @@ def format_history():
     
 def retriever(user_query):
     retriever = vector_store.as_retriever(
-        search_type = "similarity",
-        search_kwargs = {'k': 4}
+        search_type = "mmr",
+        search_kwargs = {
+            'k': 4,
+            "fetch_k":20
+        }
     )
     docs = retriever.invoke(user_query)
 
@@ -56,12 +59,22 @@ def retriever(user_query):
     return context
 
 def generateResponse(user_query,context,conversation_history):
-    client = genai.Client(api_key = os.getenv("gen_ai_api_key"))
-    interaction = client.interactions.create(
-        model = "gemini-3.5-flash",
-        system_instruction = "You are the helpfull asstistant. answer ONLY using provided context, if the answer is not in a context say 'Sorry, I couldn't found the context in provide document. Please ask other question'",
-        input = f"User query: {user_query} context: {context} conversation_history: {conversation_history}"
+    client = Groq(
+        api_key= os.getenv("GROQ_API_KEY")
     )
+    completion = client.chat.completions.create(
+        model = "openai/gpt-oss-120b",
+        messages = [
+            {
+               "role": "system",
+                "content": prompt
+            },
+            {
+                "role": "user",
+                "content": f"user_query: {user_query}, context: {context}, conversation history: {conversation_history}",
+                
+            }]
+        )
 
-    response = interaction.output_text
+    response = completion.choices[0].message.content
     return response
