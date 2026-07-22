@@ -2,7 +2,7 @@ import os
 from google import genai
 from dotenv import load_dotenv
 from langchain_chroma import Chroma
-from backend.rag.rag_structure import embedding
+from rag_structure import embedding
 
 load_dotenv()
 
