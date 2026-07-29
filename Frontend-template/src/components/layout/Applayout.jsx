@@ -16,7 +16,8 @@ function AppLayout() {
             const aireply = {
                 id: Date.now(),
                 role: "system",
-                content: response.message_to_send
+                content: response.message_to_send,
+                image_url: response.image_url
             }
             setMessages((prev) => [...prev, aireply])
         }
@@ -26,7 +27,7 @@ function AppLayout() {
             {
                 id: Date.now(),
                 role: "system",
-                content: "Something went Wrong"
+                content: "Internal server problem"
             }
             ])
         }

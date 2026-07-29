@@ -46,7 +46,7 @@ function ChatList(props) {
                 msg.role === "user" ?
                     (<UserMessage key={msg.id} content={msg.content} />)
                     :
-                    (<AiMessage key={msg.id} content={msg.content} />)
+                    (<AiMessage key={msg.id} content={msg.content} image_url={msg.image_url} />)
             )}
             {isTyping && <TypingIndicator />}
         </div>

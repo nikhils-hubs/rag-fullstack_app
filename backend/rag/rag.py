@@ -1,4 +1,8 @@
 import os 
+import json
+from pathlib import Path
+import uuid
+from huggingface_hub import InferenceClient
 from groq import Groq
 from dotenv import load_dotenv
 from langchain_chroma import Chroma
@@ -77,4 +81,18 @@ def generateResponse(user_query,context,conversation_history):
         )
 
     response = completion.choices[0].message.content
-    return response
+    return json.loads(response)
+
+def imageGeneration(image_prompt):
+    client = InferenceClient(
+        api_key= os.getenv("HF_TOKEN")
+    )
+    image = client.text_to_image(
+        prompt=image_prompt,
+        model="black-forest-labs/FLUX.1-schnell"
+    )
+    file_name = f"{uuid.uuid4()}.png"
+    save_dir = Path("generated_image")
+    image_path = save_dir/file_name
+    image.save(image_path)
+    return file_name
