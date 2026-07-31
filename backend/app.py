@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel as BaseModelV1
 from rag.rag import retriever, generateResponse, make_history, format_history, history, imageGeneration
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -20,7 +20,7 @@ def fn():
     return {"message": "hello World"}
 
 
-class chatRequest(BaseModel):
+class chatRequest(BaseModelV1):
     message: str
     
 @app.post("/chat")
@@ -41,7 +41,7 @@ def chat(request: chatRequest):
     
     return{
         "message_to_send": final_response,
-        "image_url": f"/images/{image_path}" if image_path else None
+        # "image_url": f"/images/{image_path}" if image_path else None
     }
     
     

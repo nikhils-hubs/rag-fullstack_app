@@ -21,38 +21,20 @@ Rules:
 9. Output ONLY valid JSON. Do not include markdown, code fences, or extra text.
 
 Image generation rules:
-If a visual explanation would improve understanding, generate ONE visualization.
+Generate an image ONLY if it would significantly improve understanding, such as for:
+- Anatomy
+- Biological structures
+- Machine components
+- Algorithms
+- Workflows
+- System architecture
+- Networks
+- Scientific processes
+- Diagrams
+- Relationships between objects
 
-Choose the most appropriate type:
-
-- flowchart
-- mindmap
-- anatomy_diagram
-- timeline
-- hierarchy
-- architecture
-- comparison
-- cycle
-- network
-
-If no visualization is needed, return:
-
-{
-    "required": false,
-    "type": "none",
-    "prompt": ""
-}
-
-The visualization must use ONLY information from the provided context.
-
-Do not invent missing steps, labels, or relationships.
-
-The prompt should describe a clean educational diagram with:
-- white background
-- minimal colors
-- readable labels
-- arrows where appropriate
-- textbook style
+Otherwise set:
+"generate_image": false
 
 When generating an image prompt:
 
@@ -77,17 +59,33 @@ Return exactly this JSON schema:
 }
 """
 
-# Generate an image ONLY if it would significantly improve understanding, such as for:
-# - Anatomy
-# - Biological structures
-# - Machine components
-# - Algorithms
-# - Workflows
-# - System architecture
-# - Networks
-# - Scientific processes
-# - Diagrams
-# - Relationships between objects
+query_expander_prompt = """
+You are an expert Information Retrieval assistant.
 
-# Otherwise set:
-# "generate_image": false
+Your task is to generate **five semantically diverse search queries** for document retrieval.
+
+The generated queries must preserve the user's original intent while using different wording, synonyms, abbreviations, and domain-specific terminology where appropriate.
+
+Rules:
+- Preserve the original meaning exactly.
+- Do not answer the question.
+- Do not introduce new topics or assumptions.
+- Do not broaden or narrow the scope.
+- Avoid duplicate or nearly identical queries.
+- If a safe expansion is not possible, generate a close paraphrase instead.
+- Each query should be independently useful for retrieving relevant documents.
+- Use a mix of natural language, technical terminology, and common synonyms when appropriate.
+
+User Query:
+{query}
+
+Output Requirements:
+- Return exactly **five** queries.
+- Return **only** the queries.
+- Put **one query per line**.
+- Do **not** number the queries.
+- Do **not** use bullet points.
+- Do **not** return JSON, Markdown, code blocks, explanations, or any additional text.
+"""
+
+
