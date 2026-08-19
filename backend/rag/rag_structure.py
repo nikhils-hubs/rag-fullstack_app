@@ -1,38 +1,43 @@
-import os
-from langchain_community.document_loaders import PyMuPDFLoader
+from backend.utils.handling_json import json_dumps,json_loader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_core.documents import Document
 from langchain_chroma import Chroma
 
+file_data = json_loader(directory_name="knowlegde_base",file_name="building-muscle.json")
 
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-FILE_PATH_bulding_muscle = os.path.join(BASE_DIR,"documents","building-Muscle-Made-rag.pdf")
-FILE_PATH_science_based_lifting = os.path.join(BASE_DIR,"documents","Science-based-lifting-rag.pdf")
-
-loader_1 = PyMuPDFLoader(FILE_PATH_bulding_muscle)
-loader_2 = PyMuPDFLoader(FILE_PATH_science_based_lifting)
-document_bulding_muscle = loader_1.load()
-document_science_based_lifting = loader_2.load()
-
-text_spliters = RecursiveCharacterTextSplitter(
-    separators= ["\n\n", "\n", " ", ""],
-    chunk_size = 500,
-    chunk_overlap = 50,
+def chunking(file_data):
+    text_spliter = RecursiveCharacterTextSplitter(
+    chunk_size = 800,
+    chunk_overlap = 100,
+    separators =[
+        "\n\n", 
+        "\n", 
+        ". ",
+        " ",
+        ""
+    ],
     length_function = len,
-    is_separator_regex= False
-)
-
-for doc in document_bulding_muscle:
-    doc.metadata["book"] = "Building Muscle"
-
-for doc in document_science_based_lifting:
-    doc.metadata["book"] = "Science and Development of Muscle Hypertrophy"
+    is_separator_regex = False,
+    )
     
+    chapter_docs = []
+    for entry in file_data:
+        chapter_name = entry["chapter"]
+        chapter_text = entry["text"]
+        chapter_docs.append(
+            Document(
+                page_content = chapter_text,
+                metadata = {
+                    "chapter": chapter_name
+                }
+            )
+        )
+    chunks = text_spliter.split_documents(chapter_docs)
+    return chunks
+    
+chunk = chunking(file_data = file_data)
 
-chunks = text_spliters.split_documents(document_bulding_muscle)
-chunks_2 = text_spliters.split_documents(document_science_based_lifting)
-
-allchunks = chunks + chunks_2
 
 embedding = HuggingFaceEmbeddings(
     model_name = "BAAI/bge-small-en-v1.5",
@@ -40,9 +45,8 @@ embedding = HuggingFaceEmbeddings(
 )
 
 vector_store = Chroma.from_documents(
-    documents = allchunks,
+    documents = chunk,
     embedding = embedding,
-    persist_directory="./chroma_vector_DB",
-    collection_name= "muscle_growth"
-    
+    persist_directory="./vector_DB",
+    collection_name= "muscle_growth" 
 )

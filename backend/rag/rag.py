@@ -10,7 +10,6 @@ from rag.rag_structure import embedding
 from prompts.llm_prompt import prompt,query_expander_prompt
 
 load_dotenv()
-
 client = Groq(
         api_key= os.getenv("GROQ_API_KEY")
 )
