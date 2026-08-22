@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from langchain_chroma import Chroma
 from rag.rag_structure import embedding
 from prompts.llm_prompt import prompt,query_expander_prompt
+from rag.bm25 import bm25
 
 load_dotenv()
 client = Groq(

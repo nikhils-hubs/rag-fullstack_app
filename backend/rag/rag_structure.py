@@ -3,6 +3,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 from langchain_chroma import Chroma
+import uuid
 
 file_data = json_loader(directory_name="knowlegde_base",file_name="building-muscle.json")
 
@@ -22,21 +23,32 @@ def chunking(file_data):
     )
     
     chapter_docs = []
-    for entry in file_data:
+    for chapter_index,entry in enumerate(file_data, start = 1):
         chapter_name = entry["chapter"]
         chapter_text = entry["text"]
         chapter_docs.append(
             Document(
                 page_content = chapter_text,
                 metadata = {
-                    "chapter": chapter_name
+                    "chunk_id": f"chunk_{uuid.uuid4()}",
+                    "chapter": chapter_name,
+                    "chapter_index": chapter_index
                 }
             )
         )
     chunks = text_spliter.split_documents(chapter_docs)
+    chunks_count = {}
+    for chunk in chunks:
+        chapter_index = chunk.metadata["chapter_index"]
+        chunk_index = chunks_count.get(chapter_index, 0)
+        chunk.metadata["chunk_id"] = (
+            f" chapter_{chapter_index}_chunk_{chunk_index}"
+        )
+        chunks_count[chapter_index] = chunk_index + 1
     return chunks
     
 chunk = chunking(file_data = file_data)
+print(chunk)
 
 
 embedding = HuggingFaceEmbeddings(

@@ -32,7 +32,7 @@ def cleaning_book(file_path,file_path_json):
     if current_text:
         chapters.append({
             "chapter": text,
-            "text": " ".join(current_text)
+            "text": " ".join(current_text),
         })
 
     with open(file_path_json,"w",encoding="utf-8") as file:
