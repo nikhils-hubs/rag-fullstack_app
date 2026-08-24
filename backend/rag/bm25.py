@@ -1,15 +1,23 @@
 import re
-from rank_bm25 import BM25Okapi
+from langchain_community.retrievers import BM25Retriever
+from backend.rag.rag_structure import chunk
 
-def bm25(document, query):
-    def tokenizer(doc: list[str]):
-        return [re.findall(r"\w+",item.lower()) for item in doc]
-    doc_corpus = tokenizer(document)
-    bm25 = BM25Okapi(doc_corpus)
-    query_corpus = re.findall(r"\w+",query.lower())
-    # doc_scores = bm25.get_scores(query_corpus)
-    top_docs = bm25.get_top_n(query_corpus, document, n=1)
-    return top_docs
+def bm25(chunks, query):
+    bm25_retrievers = BM25Retriever.from_documents(
+        chunks
+    )
+    bm25_retrievers.k = 10
+    result = bm25_retrievers.invoke(query)
+    return result
+
+    # def tokenizer(doc: list[str]):
+    #     return [re.findall(r"\w+",item.lower()) for item in doc]
+    # doc_corpus = tokenizer(document)
+    # bm25 = BM25Okapi(doc_corpus)
+    # query_corpus = re.findall(r"\w+",query.lower())
+    # # doc_scores = bm25.get_scores(query_corpus)
+    # top_docs = bm25.get_top_n(query_corpus, document, n=1)
+    # return top_docs
 
 
 def main():
@@ -24,7 +32,7 @@ def main():
         query = input("ask anything: ")
         if query == "exit":
             break
-        query_answer = bm25(documents,query)
+        query_answer = bm25(chunk,query)
         print(len(query_answer))
         print(query_answer)
 

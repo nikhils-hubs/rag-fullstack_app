@@ -6,9 +6,10 @@ from huggingface_hub import InferenceClient
 from groq import Groq
 from dotenv import load_dotenv
 from langchain_chroma import Chroma
-from rag.rag_structure import embedding
-from prompts.llm_prompt import prompt,query_expander_prompt
-from rag.bm25 import bm25
+from backend.rag.rag_structure import embedding
+from backend.prompts.llm_prompt import prompt,query_expander_prompt
+from backend.rag.rag_structure import chunk
+from langchain_community.retrievers import BM25Retriever
 
 load_dotenv()
 client = Groq(
@@ -18,7 +19,7 @@ client = Groq(
 vector_store = Chroma(
     collection_name="muscle_growth",
     embedding_function=embedding,
-    persist_directory="./chroma_vector_DB",
+    persist_directory="./vector_DB",
 )
 
 history = []
@@ -53,6 +54,7 @@ def format_history(history):
     
 def queryExpander(user_query):
     chat_completion = client.chat.completions.create(
+        model = "openai/gpt-oss-120b",
         messages=[
             {
                 "role": "system",
@@ -63,7 +65,8 @@ def queryExpander(user_query):
                 "content": user_query,
             }
         ],
-        model = "llama-3.3-70b-versatile"
+        temperature = 0.3,
+        max_completion_tokens = 600,
     )
     response = chat_completion.choices[0].message.content
     queries = []
@@ -73,12 +76,20 @@ def queryExpander(user_query):
             queries.append(query)
     return queries
     
+def bm25_retriver(chunks,user_query):
+    bm25_retrieval = BM25Retriever.from_documents(
+        chunks
+    )
+    bm25_retrieval.k = 10
+    result = bm25_retrieval.invoke(user_query)
+    return result
+    
     
 def retriever(queries):
     retriever = vector_store.as_retriever(
         search_type = "mmr",
         search_kwargs = {
-            'k': 15,
+            'k': 10,
             "fetch_k": 20,
         }
     )
@@ -87,13 +98,32 @@ def retriever(queries):
         retrived_info = retriever.invoke(query)
         if retrived_info :    # this checks wheater list is comming from invoke is empty or not if it is empty than it will become false and if !empty than it will become true this doing len(retrived_info) > 0 
             context.extend(retrived_info)
-    full_context = "\n\n".join(
-        doc.page_content for doc in context
+    return context
+
+def reciprocal_rank_fusion(result_list: list[str],k=60):
+    scores = {}
+    documents = {}
+    for result in result_list:
+        for rank, doc in enumerate(result,start=1):
+            chunk_id = doc.metadata["chunk_id"]
+            if chunk_id not in scores:
+                scores[chunk_id] = 0
+            scores[chunk_id] =+ 1/(k+rank)
+            if chunk_id not in documents:
+                documents[chunk_id] = doc
+    ranked_documents = sorted(
+        documents.items(),
+        key = lambda x: scores[x[0]],
+        reverse = True,
     )
-    return full_context
+    document_list = []
+    for chunk_id, doc in ranked_documents:
+        document_list.append(doc)
+    return document_list
 
 def generateResponse(user_query,context,conversation_history):
     chat_completion = client.chat.completions.create(
+    model= "openai/gpt-oss-120b",
     messages = [
         {
            "role": "system",
@@ -103,8 +133,9 @@ def generateResponse(user_query,context,conversation_history):
             "role": "user",
             "content": f"user_query: {user_query}, context: {context}, conversation history: {conversation_history}",
     
-        }],
-    model= "llama-3.3-70b-versatile"
+        }
+        ],
+            temperature = 0.3 
     )
 
     response = chat_completion.choices[0].message.content
@@ -131,11 +162,21 @@ def main():
             break
         queries = queryExpander(user_query)
         print(queries)
-        context = retriever(queries)
-        print(context)
+        context_mmr = retriever(queries)
+        context_bm25 = bm25_retriver(chunk,user_query)
+        fused_doc = reciprocal_rank_fusion([context_bm25,context_mmr])
+        print("==============================")
+        for rank, doc in enumerate(fused_doc,start=1):
+            print(
+                f"\nRank {rank}: "
+                f"{doc.metadata['chunk_id']} | "
+                f"{doc.metadata['chapter']}"
+            )
+        print("==============================")    
+        context = "\n\n".join(
+            doc.page_content for doc in fused_doc
+        )
         conversation_history = format_history(history)
-        print(history)
-        print(conversation_history)
         llm_response = generateResponse(user_query,context,conversation_history)
         print(llm_response)
         make_history(user_query,llm_response)

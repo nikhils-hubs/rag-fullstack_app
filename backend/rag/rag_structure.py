@@ -1,9 +1,9 @@
+import uuid
 from backend.utils.handling_json import json_dumps,json_loader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 from langchain_chroma import Chroma
-import uuid
 
 file_data = json_loader(directory_name="knowlegde_base",file_name="building-muscle.json")
 
@@ -48,8 +48,6 @@ def chunking(file_data):
     return chunks
     
 chunk = chunking(file_data = file_data)
-print(chunk)
-
 
 embedding = HuggingFaceEmbeddings(
     model_name = "BAAI/bge-small-en-v1.5",
