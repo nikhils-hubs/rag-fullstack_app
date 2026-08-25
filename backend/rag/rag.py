@@ -10,6 +10,8 @@ from backend.rag.rag_structure import embedding
 from backend.prompts.llm_prompt import prompt,query_expander_prompt
 from backend.rag.rag_structure import chunk
 from langchain_community.retrievers import BM25Retriever
+from FlagEmbedding import FlagReranker
+from langchain_core.documents import Document
 
 load_dotenv()
 client = Groq(
@@ -100,7 +102,7 @@ def retriever(queries):
             context.extend(retrived_info)
     return context
 
-def reciprocal_rank_fusion(result_list: list[str],k=60):
+def reciprocal_rank_fusion(result_list: list[str] ,k=60):
     scores = {}
     documents = {}
     for result in result_list:
@@ -108,19 +110,40 @@ def reciprocal_rank_fusion(result_list: list[str],k=60):
             chunk_id = doc.metadata["chunk_id"]
             if chunk_id not in scores:
                 scores[chunk_id] = 0
-            scores[chunk_id] =+ 1/(k+rank)
+            scores[chunk_id] = + 1/(k+rank)
             if chunk_id not in documents:
                 documents[chunk_id] = doc
-    ranked_documents = sorted(
+    rrf_ranked_documents = sorted(
         documents.items(),
         key = lambda x: scores[x[0]],
         reverse = True,
     )
     document_list = []
-    for chunk_id, doc in ranked_documents:
+    for chunk_id, doc in rrf_ranked_documents:
         document_list.append(doc)
     return document_list
 
+def reranker(query: str, documents: list[Document],top_k: int):
+    reranker = FlagReranker(
+        "BAAI/bge-reranker-v2-m3",
+        use_fp16= True,
+    )
+    pair = [
+        [query, doc.page_content]
+        for doc in documents
+    ]
+    score = reranker.compute_score(pair)
+    ranked_docs = list(zip(documents, score))
+    ranked_docs.sort(
+        key = lambda x: x[1],
+        reverse = True,
+    )
+    final_docs = ranked_docs[:top_k]
+    document = []
+    for doc, score in final_docs:
+        document.append(doc)
+    return document
+    
 def generateResponse(user_query,context,conversation_history):
     chat_completion = client.chat.completions.create(
     model= "openai/gpt-oss-120b",
@@ -165,16 +188,12 @@ def main():
         context_mmr = retriever(queries)
         context_bm25 = bm25_retriver(chunk,user_query)
         fused_doc = reciprocal_rank_fusion([context_bm25,context_mmr])
+        final_docs = reranker(user_query, fused_doc, top_k = 6)
         print("==============================")
-        for rank, doc in enumerate(fused_doc,start=1):
-            print(
-                f"\nRank {rank}: "
-                f"{doc.metadata['chunk_id']} | "
-                f"{doc.metadata['chapter']}"
-            )
-        print("==============================")    
+        for rank,doc in enumerate(final_docs):
+            print(f"{rank} {doc.metadata["chunk_id"]} | Chapter{rank}: {doc.metadata["chapter"]}") 
         context = "\n\n".join(
-            doc.page_content for doc in fused_doc
+            doc.page_content for doc in final_docs
         )
         conversation_history = format_history(history)
         llm_response = generateResponse(user_query,context,conversation_history)
