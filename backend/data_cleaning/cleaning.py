@@ -31,7 +31,7 @@ def cleaning_book(file_path,file_path_json):
             current_text.append(text)
     if current_text:
         chapters.append({
-            "chapter": text,
+            "chapter": current_tittle,
             "text": " ".join(current_text),
         })
 
