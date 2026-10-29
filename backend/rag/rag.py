@@ -10,8 +10,12 @@ from rag.rag_structure import embedding
 from prompts.llm_prompt import prompt,query_expander_prompt
 from rag.rag_structure import chunk
 from langchain_community.retrievers import BM25Retriever
-from FlagEmbedding import FlagReranker
 from langchain_core.documents import Document
+from sentence_transformers import CrossEncoder
+
+reranker_model = CrossEncoder(
+    "cross-encoder/ms-marco-MiniLM-L-6-v2"
+)
 
 load_dotenv()
 client = Groq(
@@ -123,11 +127,10 @@ def reciprocal_rank_fusion(result_list: list[str] ,k=60):
         document_list.append(doc)
     return document_list
 
+
 def reranker(query: str, documents: list[Document],top_k: int):
-    reranker = FlagReranker(
-        "BAAI/bge-reranker-v2-m3",
-        use_fp16= True,
-    )
+    if not documents:
+        return []
     pair = [
         [query, doc.page_content]
         for doc in documents
