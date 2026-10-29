@@ -104,6 +104,8 @@ llvmlite==0.49.0
 loguru==0.7.3
 lxml==6.1.1
 lz4==4.4.5
+# Editable install with no version control (mage-flow==0.1.0)
+-e /Users/nikhilsingh/langchain_rag/Mage/mage_flow
 mail-parser==4.4.0
 markdown-it-py==4.2.0
 marko==2.2.3
