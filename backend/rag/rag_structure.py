@@ -1,5 +1,5 @@
 import uuid
-from backend.utils.handling_json import json_dumps,json_loader
+from utils.handling_json import json_dumps,json_loader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document

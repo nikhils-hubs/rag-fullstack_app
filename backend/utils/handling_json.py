@@ -1,5 +1,5 @@
 import json
-from backend.utils.DIR import DIR
+from utils.DIR import DIR
 
 def json_loader(directory_name,file_name):
     final_file_path = DIR(directory_name,file_name)

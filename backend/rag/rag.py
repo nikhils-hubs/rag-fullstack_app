@@ -6,9 +6,9 @@ from huggingface_hub import InferenceClient
 from groq import Groq
 from dotenv import load_dotenv
 from langchain_chroma import Chroma
-from backend.rag.rag_structure import embedding
-from backend.prompts.llm_prompt import prompt,query_expander_prompt
-from backend.rag.rag_structure import chunk
+from rag.rag_structure import embedding
+from prompts.llm_prompt import prompt,query_expander_prompt
+from rag.rag_structure import chunk
 from langchain_community.retrievers import BM25Retriever
 from FlagEmbedding import FlagReranker
 from langchain_core.documents import Document
@@ -91,8 +91,8 @@ def retriever(queries):
     retriever = vector_store.as_retriever(
         search_type = "mmr",
         search_kwargs = {
-            'k': 10,
-            "fetch_k": 20,
+            'k': 5,
+            "fetch_k": 10,
         }
     )
     context = []
@@ -144,7 +144,13 @@ def reranker(query: str, documents: list[Document],top_k: int):
         document.append(doc)
     return document
     
-def generateResponse(user_query,context,conversation_history):
+
+
+def generateResponse(user_query, context, conversation_history):
+    MAX_CONTEXT_CHARS = 12000
+    MAX_HISTORY_MESSAGES = 4
+    context = context[:MAX_CONTEXT_CHARS]
+    conversation_history = (conversation_history or [])[-MAX_HISTORY_MESSAGES:]
     chat_completion = client.chat.completions.create(
     model= "openai/gpt-oss-120b",
     messages = [
@@ -158,7 +164,8 @@ def generateResponse(user_query,context,conversation_history):
     
         }
         ],
-            temperature = 0.3 
+        temperature=0.3,
+        max_completion_tokens=1024
     )
 
     response = chat_completion.choices[0].message.content
